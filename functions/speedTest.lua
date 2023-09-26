@@ -37,55 +37,49 @@ function speedTest.downloadSpeed(url)
 end
 
 
-function speedTest.uploadSpeed(url)
-    if not url  then
+function speedTest.uploadSpeed(url, testDurationSeconds)
+    if not url then
         error("No url", 0)
     end
 
-    local inputFile = io.open('/dev/zero', 'r+')
+    local maxChunkSize = 1024  
+    local targetInterval = 5  
 
-    if not inputFile then
-        error("Error while opening the input file for testing upload speed", 0)
+    while maxChunkSize * 8 /90 < 2000000 and maxChunkSize < 20000000 do
+        maxChunkSize = maxChunkSize * 2
     end
 
-    local uploadData = inputFile:read(70000000)
     local easy = curl.easy({
         httpheader = {
             "User-Agent: curl/7.81.0",
             "Accept: */*",
             "Cache-Control: no-cache"
         },
-        [curl.OPT_POSTFIELDS] = uploadData,
         url = url .. "/upload",
         noprogress = false,
-        progressfunction = uploadProgressCallback
     })
 
-    testTime = socket.gettime()
+    local startTime = socket.gettime()
+    local totalBytesSent = 0
 
-    status, value = pcall(easy.perform, easy)
+    while (socket.gettime() - startTime) < 15 do
+        local uploadData = string.rep("a", maxChunkSize)
 
-    if not status then
-        easy:close()
-        error("Error: " .. value .. " while testing upload speed with host " .. url, 0)
+        easy:setopt(curl.OPT_POSTFIELDS, uploadData) 
+        local status, value = pcall(easy.perform, easy) 
+
+        if not status then
+            easy:close()
+            error("Error: " .. value .. " while testing upload speed with host " .. url, 0)
+        end
+
+        totalBytesSent = totalBytesSent + maxChunkSize
     end
 
-    local uploadSpeed = easy:getinfo(curl.INFO_SPEED_UPLOAD) / 1024 / 1024 * 8
-    easy:close()
+    easy:close() 
 
+    local uploadSpeed = totalBytesSent / 15 / 1024 / 1024 * 8
     return uploadSpeed
 end
-
-
-
--- function uploadProgressCallback () 
---     local statusUpload, uploadSpeed = pcall(speedTest.uploadSpeed,ispUrl)
---     if type(uploadSpeed) == "number" then
---         print("Your internet upload speed: ".. string.format("%.2f", uploadSpeed).. "Mbps")
---     else
---         print(uploadSpeed)
---     end
--- end
-
 
 return speedTest

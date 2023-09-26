@@ -3,6 +3,15 @@ local argparse = require('argparse')
 local speedTest = require('functions.speedTest')
 local location = require('functions.location')
 local serverList = require('functions.serverList')
+local internet = require('functions.internet')
+
+local connection = internet.checkConnection()
+
+if not connection then error('There is no internet connection') 
+
+else
+    print("Begin test")
+end
 
 local userLocation = location.getLocation()
     local ispName = userLocation['isp']
@@ -20,20 +29,29 @@ local userLocation = location.getLocation()
 local ispUrl = isp['host']
 
 local parser = argparse()
-parser:option('f --function', 'Function to execute')
+parser:flag('-f --full', 'Execute the full test')
+parser:flag('-s --server', 'Find the best server')
+parser:flag('-l --location', 'Find the user location')
+parser:flag('-d --download', 'Download speed test')
+parser:flag('-u --upload', 'Upload speed test')
+
+
 
 local args = parser:parse()
 
-if args['function'] == "upload-speed" then
+
+
+
+if args['upload'] then
     local uploadSpeed = speedTest.uploadSpeed(ispUrl)
     print("Your internet upload speed: ".. string.format("%.2f", uploadSpeed).. "Mbps")
-elseif args['function'] == "download-speed" then 
+elseif args['download'] then 
     local downloadSpeed = speedTest.downloadSpeed(ispUrl)
     print("Your internet upload speed: ".. string.format("%.2f", downloadSpeed).. "Mbps")
-elseif args['function'] == "get-location" then
+elseif args['location'] then
     local userLocation = location.getLocation()
     print("Your current location is: ".. userLocation['city'] .. ", " .. userLocation["country"])
-elseif args['function'] == "get-best-server" then
+elseif args['server']  then
     local bestIsp = location.getBestServer(serverList)
     print("Your best internet service provider: "..bestIsp)
 else
