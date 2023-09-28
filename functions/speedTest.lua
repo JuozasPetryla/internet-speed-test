@@ -42,13 +42,12 @@ function speedTest.uploadSpeed(url, testDurationSeconds)
         error("No url", 0)
     end
 
-    local maxChunkSize = 1024  
-    local targetInterval = 5  
-
-    while maxChunkSize * 8 /90 < 2000000 and maxChunkSize < 20000000 do
-        maxChunkSize = maxChunkSize * 2
+    local inputFile = io.open('/dev/zero', 'r+')
+    if not inputFile then
+        error("Error while opening the input file for testing upload speed", 0)
     end
 
+    local uploadData = inputFile:read(99999999)
     local easy = curl.easy({
         httpheader = {
             "User-Agent: curl/7.81.0",
@@ -56,29 +55,25 @@ function speedTest.uploadSpeed(url, testDurationSeconds)
             "Cache-Control: no-cache"
         },
         url = url .. "/upload",
+        [curl.OPT_POSTFIELDS] = uploadData,
         noprogress = false,
     })
 
+    local status, value = pcall(easy.perform, easy) 
     local startTime = socket.gettime()
     local totalBytesSent = 0
 
-    while (socket.gettime() - startTime) < 15 do
-        local uploadData = string.rep("a", maxChunkSize)
-
-        easy:setopt(curl.OPT_POSTFIELDS, uploadData) 
-        local status, value = pcall(easy.perform, easy) 
-
+    if (socket.gettime() - startTime) >= 15 then
+        
         if not status then
             easy:close()
             error("Error: " .. value .. " while testing upload speed with host " .. url, 0)
         end
 
-        totalBytesSent = totalBytesSent + maxChunkSize
+        easy:close() 
     end
 
-    easy:close() 
-
-    local uploadSpeed = totalBytesSent / 15 / 1024 / 1024 * 8
+    local uploadSpeed = easy:getinfo(curl.INFO_SPEED_UPLOAD) / 1024 / 1024 * 8
     return uploadSpeed
 end
 

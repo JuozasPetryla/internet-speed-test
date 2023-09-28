@@ -35,12 +35,7 @@ parser:flag('-l --location', 'Find the user location')
 parser:flag('-d --download', 'Download speed test')
 parser:flag('-u --upload', 'Upload speed test')
 
-
-
 local args = parser:parse()
-
-
-
 
 if args['upload'] then
     local uploadSpeed = speedTest.uploadSpeed(ispUrl)
